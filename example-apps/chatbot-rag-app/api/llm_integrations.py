@@ -1,21 +1,15 @@
 import os
-
-from langchain_aws import ChatBedrock
-from langchain_cohere import ChatCohere
-from langchain_google_vertexai import ChatVertexAI
-from langchain_mistralai import ChatMistralAI
-from langchain_openai import AzureChatOpenAI, ChatOpenAI
+from langchain.chat_models import init_chat_model
 
 LLM_TYPE = os.getenv("LLM_TYPE", "openai")
 
 
 def init_openai_chat(temperature):
     # Include streaming usage as this allows recording of LLM metrics
-    return ChatOpenAI(
-        model=os.getenv("CHAT_MODEL"),
-        streaming=True,
-        temperature=temperature,
-        model_kwargs={"stream_options": {"include_usage": True}},
+    return init_chat_model(
+        os.getenv("CHAT_MODEL"),
+        model_provider="openai",
+        temperature=temperature
     )
 
 
@@ -24,32 +18,39 @@ def init_vertex_chat(temperature):
     from langtrace_python_sdk.instrumentation import VertexAIInstrumentation
 
     VertexAIInstrumentation().instrument()
-    return ChatVertexAI(
-        model_name=os.getenv("CHAT_MODEL"), streaming=True, temperature=temperature
+    return init_chat_model(
+        os.getenv("CHAT_MODEL"),
+        model_provider="google_vertexai",
+        temperature=temperature
     )
 
 
 def init_azure_chat(temperature):
     # Include streaming usage as this allows recording of LLM metrics
-    return AzureChatOpenAI(
-        model=os.getenv("CHAT_DEPLOYMENT"),
-        streaming=True,
-        temperature=temperature,
-        model_kwargs={"stream_options": {"include_usage": True}},
+    return init_chat_model(
+        os.getenv("CHAT_DEPLOYMENT"),
+        model_provider="azure_openai",
+        temperature=temperature
     )
 
 
 def init_bedrock(temperature):
-    return ChatBedrock(
-        model_id=os.getenv("CHAT_MODEL"),
-        streaming=True,
-        model_kwargs={"temperature": temperature},
+    # Bedrock is not yet in EDOT. Use the Langtrace Python SDK instead
+    from langtrace_python_sdk.instrumentation import AWSBedrockInstrumentation
+
+    AWSBedrockInstrumentation().instrument()
+    return init_chat_model(
+        os.getenv("CHAT_MODEL"),
+        model_provider="bedrock",
+        temperature=temperature
     )
 
 
 def init_mistral_chat(temperature):
-    return ChatMistralAI(
-        model=os.getenv("CHAT_MODEL"), streaming=True, temperature=temperature
+    return init_chat_model(
+        os.getenv("CHAT_MODEL"),
+        model_provider="mistralai",
+        temperature=temperature
     )
 
 
@@ -58,7 +59,19 @@ def init_cohere_chat(temperature):
     from langtrace_python_sdk.instrumentation import CohereInstrumentation
 
     CohereInstrumentation().instrument()
-    return ChatCohere(model=os.getenv("CHAT_MODEL"), temperature=temperature)
+    return init_chat_model(
+        os.getenv("CHAT_MODEL"),
+        model_provider="cohere",
+        temperature=temperature
+    )
+
+
+def init_anthropic_chat(temperature):
+    return init_chat_model(
+        os.getenv("CHAT_MODEL"),
+        model_provider="anthropic",
+        temperature=temperature
+    )
 
 
 MAP_LLM_TYPE_TO_CHAT_MODEL = {
@@ -68,6 +81,7 @@ MAP_LLM_TYPE_TO_CHAT_MODEL = {
     "vertex": init_vertex_chat,
     "mistral": init_mistral_chat,
     "cohere": init_cohere_chat,
+    "anthropic": init_anthropic_chat,
 }
 
 
