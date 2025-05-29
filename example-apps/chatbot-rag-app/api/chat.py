@@ -11,6 +11,13 @@ from langchain_elasticsearch import (
     ElasticsearchStore,
     SparseVectorStrategy,
 )
+from langchain_core.messages.ai import AIMessageChunk
+
+from langgraph.graph import START, StateGraph
+from observe import galileo_handler
+
+from utils import State
+
 from llm_integrations import get_llm
 
 INDEX = os.getenv("ES_INDEX", "workplace-app-docs")
@@ -27,6 +34,8 @@ store = ElasticsearchStore(
     index_name=INDEX,
     strategy=SparseVectorStrategy(model_id=ELSER_MODEL),
 )
+
+store_retriever = store.as_retriever()
 
 
 @cache
@@ -45,44 +54,72 @@ def ask_question(question, session_id):
         INDEX_CHAT_HISTORY, session_id
     )
 
-    if len(chat_history.messages) > 0:
-        # create a condensed question
-        condense_question_prompt = render_template(
-            "condense_question_prompt.txt",
+    # Define application steps
+    def retrieve(state: State):
+        question = state["question"]
+        if len(chat_history.messages) > 0:
+            # create a condensed question
+            condense_question_prompt = render_template(
+                "condense_question_prompt.txt",
+                question=question,
+                chat_history=chat_history.messages,
+            )
+            condensed_question = llm.invoke(condense_question_prompt).content
+        else:
+            condensed_question = question
+        current_app.logger.debug("Condensed question: %s", condensed_question)
+        current_app.logger.debug("Question: %s", question)
+
+        retrieved_docs = store_retriever.invoke(condensed_question)
+
+        return {"context": retrieved_docs}
+
+    def generate(state: State):
+        question = state["question"]
+        docs = state["context"]
+
+        qa_prompt = render_template(
+            "rag_prompt.txt",
             question=question,
+            docs=docs,
             chat_history=chat_history.messages,
         )
-        condensed_question = llm.invoke(condense_question_prompt).content
-    else:
-        condensed_question = question
 
-    current_app.logger.debug("Condensed question: %s", condensed_question)
-    current_app.logger.debug("Question: %s", question)
+        response = llm.invoke(qa_prompt)
+        return {"answer": response.content}
 
-    docs = store.as_retriever().invoke(condensed_question)
-    for doc in docs:
-        doc_source = {**doc.metadata, "page_content": doc.page_content}
-        current_app.logger.debug(
-            "Retrieved document passage from: %s", doc.metadata["name"]
-        )
-        yield f"data: {SOURCE_TAG} {json.dumps(doc_source)}\n\n"
-
-    qa_prompt = render_template(
-        "rag_prompt.txt",
-        question=question,
-        docs=docs,
-        chat_history=chat_history.messages,
-    )
-
+    graph_builder = StateGraph(State).add_sequence([retrieve, generate])
+    graph_builder.add_edge(START, "retrieve")
+    graph = graph_builder.compile()
+    retrieved = False
     answer = ""
-    for chunk in llm.stream(qa_prompt):
-        content = chunk.content.replace(
-            "\n", " "
-        )  # the stream can get messed up with newlines
-        yield f"data: {content}\n\n"
-        answer += chunk.content
+    for mode, step in graph.stream(
+        {"question": question},
+        stream_mode=["updates", "messages"],
+        config={"callbacks": [galileo_handler]},
+    ):
+        if mode == "updates":
+            if not retrieved and "retrieve" in step:
+                retrieved = True
+                for doc in step["retrieve"]["context"]:
+                    doc_source = {**doc.metadata, "page_content": doc.page_content}
+                    current_app.logger.debug(
+                        "Retrieved document passage from: %s", doc.metadata["name"]
+                    )
+                    yield f"data: {SOURCE_TAG} {json.dumps(doc_source)}\n\n"
+            if "generate" in step:
+                answer = step["generate"]["answer"]
+                answer = answer.replace("\n", " ")
+                yield f"data: {DONE_TAG}\n\n"
+        elif mode == "messages":
+            for message in step:
+                if not isinstance(message, AIMessageChunk):
+                    continue
+                content = message.content.replace(
+                    "\n", " "
+                )  # the stream can get messed up with newlines
+                yield f"data: {content}\n\n"
 
-    yield f"data: {DONE_TAG}\n\n"
     current_app.logger.debug("Answer: %s", answer)
 
     chat_history.add_user_message(question)
