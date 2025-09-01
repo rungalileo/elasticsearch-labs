@@ -88,6 +88,10 @@ fsspec==2025.3.0
     # via
     #   huggingface-hub
     #   langtrace-python-sdk
+galileo-core==3.44.0
+    # via galileo-observe
+galileo-observe==1.23.0
+    # via -r requirements.in
 google-api-core[grpc]==2.24.2
     # via
     #   google-cloud-aiplatform
@@ -154,6 +158,8 @@ httpcore==1.0.7
 httpx==0.28.1
     # via
     #   cohere
+    #   galileo-core
+    #   galileo-observe
     #   langchain-google-vertexai
     #   langchain-mistralai
     #   langsmith
@@ -242,7 +248,7 @@ multidict==6.1.0
     #   yarl
 mypy-extensions==1.0.0
     # via typing-inspect
-numpy
+numpy==2.3.0
     # via
     #   elasticsearch
     #   langchain-aws
@@ -336,7 +342,7 @@ proto-plus==1.26.1
     #   google-api-core
     #   google-cloud-aiplatform
     #   google-cloud-resource-manager
-protobuf==5.29.3
+protobuf==5.29.5
     # via
     #   google-api-core
     #   google-cloud-aiplatform
@@ -357,6 +363,8 @@ pyasn1-modules==0.4.1
 pydantic==2.10.6
     # via
     #   cohere
+    #   galileo-core
+    #   galileo-observe
     #   google-cloud-aiplatform
     #   langchain
     #   langchain-aws
@@ -373,13 +381,21 @@ pydantic-core==2.27.2
     #   cohere
     #   pydantic
 pydantic-settings==2.8.1
-    # via langchain-community
+    # via
+    #   galileo-core
+    #   langchain-community
+pyjwt==2.10.1
+    # via
+    #   galileo-core
+    #   galileo-observe
 python-dateutil==2.9.0.post0
     # via
     #   botocore
     #   google-cloud-bigquery
 python-dotenv==1.0.1
     # via pydantic-settings
+pytz==2025.2
+    # via galileo-observe
 pyyaml==6.0.2
     # via
     #   huggingface-hub
@@ -444,6 +460,7 @@ termcolor==2.5.0
 tiktoken==0.9.0
     # via
     #   -r requirements.in
+    #   galileo-observe
     #   langchain-openai
     #   langtrace-python-sdk
 tokenizers==0.21.1
@@ -468,6 +485,7 @@ typing-extensions==4.12.2
     # via
     #   anyio
     #   cohere
+    #   galileo-core
     #   google-cloud-aiplatform
     #   huggingface-hub
     #   langchain-core
@@ -489,6 +507,8 @@ urllib3==2.3.0
     #   requests
     #   sentry-sdk
     #   types-requests
+uvloop==0.21.0
+    # via galileo-core
 werkzeug==3.1.3
     # via
     #   flask
@@ -507,28 +527,3 @@ zstandard==0.23.0
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools
-opentelemetry-instrumentation-asyncio==0.52b0
-opentelemetry-instrumentation-dbapi==0.52b0
-opentelemetry-instrumentation-logging==0.52b0
-opentelemetry-instrumentation-sqlite3==0.52b0
-opentelemetry-instrumentation-threading==0.52b0
-opentelemetry-instrumentation-urllib==0.52b0
-opentelemetry-instrumentation-wsgi==0.52b0
-opentelemetry-instrumentation-aiohttp-client==0.52b0
-opentelemetry-instrumentation-aiohttp-server==0.52b0
-opentelemetry-instrumentation-boto3sqs==0.52b0
-opentelemetry-instrumentation-botocore==0.52b0
-opentelemetry-instrumentation-click==0.52b0
-opentelemetry-instrumentation-elasticsearch==0.52b0
-opentelemetry-instrumentation-flask==0.52b0
-opentelemetry-instrumentation-grpc==0.52b0
-opentelemetry-instrumentation-httpx==0.52b0
-opentelemetry-instrumentation-jinja2==0.52b0
-opentelemetry-instrumentation-requests==0.52b0
-opentelemetry-instrumentation-sqlalchemy==0.52b0
-opentelemetry-instrumentation-system-metrics==0.52b0
-opentelemetry-instrumentation-tortoiseorm==0.52b0
-opentelemetry-instrumentation-urllib3==0.52b0
-elastic-opentelemetry-instrumentation-openai==0.6.1
-
-galileo_observe
